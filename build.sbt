@@ -1,6 +1,6 @@
 ThisBuild / organization := "org.halcat"
 ThisBuild / scalaVersion := "2.12.8"
-ThisBuild / version := "0.9.0-SNAPSHOT"
+ThisBuild / version := "0.9.0"
 
 ThisBuild / scmInfo := Some(
   ScmInfo(
