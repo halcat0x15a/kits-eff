@@ -2,7 +2,13 @@ package kits.eff
 
 trait Fx[A] extends Any
 
-case class Union[R, A](tag: Manifest[_], value: R with Fx[A])
+case class Union[R, A](tag: Manifest[_], value: Fx[_]) {
+  def decomp[F, S](implicit F: Manifest[F]): Either[Union[S, A], F with Fx[A]] =
+    if (F.runtimeClass.isInstance(value) && tag <:< F)
+      Right(value.asInstanceOf[F with Fx[A]])
+    else
+      Left(this.asInstanceOf[Union[S, A]])
+}
 
 sealed abstract class Eff[-R, +A] extends Product with Serializable {
   def map[B](f: A => B): Eff[R, B]
@@ -11,7 +17,7 @@ sealed abstract class Eff[-R, +A] extends Product with Serializable {
 }
 
 object Eff {
-  def apply[F, A](fa: F with Fx[A])(implicit F: Manifest[F]): Eff[F, A] = Impure(Union[F, A](F, fa), Arrs.Leaf((a: A) => Pure(a)))
+  def apply[F, A](fa: F with Fx[A])(implicit F: Manifest[F]): Eff[F, A] = Impure(Union(F, fa), Arrs.Leaf((a: A) => Pure(a)))
 
   def run[A](eff: Eff[Any, A]): A =
     (eff: @unchecked) match {

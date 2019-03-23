@@ -13,13 +13,16 @@ trait Recurser[F, R, A, B] {
       eff match {
         case Eff.Pure(a) =>
           pure(a)
-        case Eff.Impure(Union(tag, fa), k) if tag <:< F =>
-          tailRec(fa.asInstanceOf[F with Fx[Any]]) match {
-            case Left(a) => loop(k(a))
-            case Right(eff) => eff
+        case Eff.Impure(u, k) =>
+          u.decomp[F, R] match {
+            case Right(fa) =>
+              tailRec(fa) match {
+                case Left(a) => loop(k(a))
+                case Right(eff) => eff
+              }
+            case Left(r) =>
+              Eff.Impure(r, Arrs.Leaf((a: Any) => apply(k(a))))
           }
-        case Eff.Impure(r, k) =>
-          Eff.Impure(r.asInstanceOf[Union[R, Any]], Arrs.Leaf((a: Any) => apply(k(a))))
       }
     loop(eff)
   }
@@ -36,13 +39,16 @@ trait StateRecurser[F, R, S, A, B] {
       eff match {
         case Eff.Pure(a) =>
           pure(s, a)
-        case Eff.Impure(Union(tag, fa), k) if tag <:< F =>
-          tailRec(s, fa.asInstanceOf[F with Fx[Any]]) match {
-            case Left((s, a)) => loop(s, k(a))
-            case Right(eff) => eff
+        case Eff.Impure(u, k) =>
+          u.decomp[F, R] match {
+            case Right(fa) =>
+              tailRec(s, fa) match {
+                case Left((s, a)) => loop(s, k(a))
+                case Right(eff) => eff
+              }
+            case Left(r) =>
+              Eff.Impure(r, Arrs.Leaf((a: Any) => apply(s, k(a))))
           }
-        case Eff.Impure(r, k) =>
-          Eff.Impure(r.asInstanceOf[Union[R, Any]], Arrs.Leaf((a: Any) => apply(s, k(a))))
       }
     loop(s, eff)
   }

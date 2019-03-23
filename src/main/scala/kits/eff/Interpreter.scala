@@ -9,10 +9,13 @@ trait Interpreter[F, R, A, B] {
     eff match {
       case Eff.Pure(a) =>
         pure(a)
-      case Eff.Impure(Union(tag, fa), k) if tag <:< F =>
-        flatMap(fa.asInstanceOf[F with Fx[Any]])(a => apply(k(a)))
-      case Eff.Impure(r, k) =>
-        Eff.Impure(r.asInstanceOf[Union[R, Any]], Arrs.Leaf((a: Any) => apply(k(a))))
+      case Eff.Impure(u, k) =>
+        u.decomp[F, R] match {
+          case Right(fa) =>
+            flatMap(fa)(a => apply(k(a)))
+          case Left(r) =>
+            Eff.Impure(r, Arrs.Leaf((a: Any) => apply(k(a))))
+        }
     }
 }
 
@@ -25,9 +28,12 @@ trait StateInterpreter[F, R, S, A, B] {
     eff match {
       case Eff.Pure(a) =>
         pure(s, a)
-      case Eff.Impure(Union(tag, fa), k) if tag <:< F =>
-        flatMap(s, fa.asInstanceOf[F with Fx[Any]])((s, a) => apply(s, k(a)))
-      case Eff.Impure(r, k) =>
-        Eff.Impure(r.asInstanceOf[Union[R, Any]], Arrs.Leaf((a: Any) => apply(s, k(a))))
+      case Eff.Impure(u, k) =>
+        u.decomp[F, R] match {
+          case Right(fa) =>
+            flatMap(s, fa)((s, a) => apply(s, k(a)))
+          case Left(r) =>
+            Eff.Impure(r, Arrs.Leaf((a: Any) => apply(s, k(a))))
+        }
     }
 }
