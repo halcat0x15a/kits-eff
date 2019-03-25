@@ -8,6 +8,8 @@ case class Union[R, A](tag: Manifest[_], value: Fx[_]) {
       Right(value.asInstanceOf[F with Fx[A]])
     else
       Left(this.asInstanceOf[Union[S, A]])
+
+  def extend[S]: Union[R with S, A] = this.asInstanceOf[Union[R with S, A]]
 }
 
 sealed abstract class Eff[-R, +A] extends Product with Serializable {
@@ -31,6 +33,6 @@ object Eff {
 
   case class Impure[R, A, B](union: Union[R, A], arrs: Arrs[R, A, B]) extends Eff[R, B] {
     def map[C](f: B => C): Eff[R, C] = Impure(union, arrs :+ (x => Pure(f(x))))
-    def flatMap[S, C](f: B => Eff[S, C]): Eff[R with S, C] = Impure(union.asInstanceOf[Union[R with S, A]], arrs :+ f)
+    def flatMap[S, C](f: B => Eff[S, C]): Eff[R with S, C] = Impure(union.extend[S], arrs :+ f)
   }
 }
