@@ -1,5 +1,8 @@
 package kits.eff
 
+import scala.collection.generic.CanBuildFrom
+import scala.collection.mutable.Builder
+
 trait Fx[A] extends Any
 
 case class Union[R, A](tag: Manifest[_], value: Fx[_]) {
@@ -25,6 +28,18 @@ object Eff {
     (eff: @unchecked) match {
       case Pure(a) => a
     }
+
+  def join[R, S, A](eff: Eff[R, Eff[S, A]]): Eff[R with S, A] = eff.flatMap(x => x)
+
+  def traverse[R, A, B, M[X] <: TraversableOnce[X]](in: M[A])(f: A => Eff[R, B])(implicit cbf: CanBuildFrom[M[A], B, M[B]]): Eff[R, M[B]] =
+    in.foldLeft(Eff.Pure(cbf(in)): Eff[R, Builder[B, M[B]]]) { (eff, a) =>
+      for {
+        builder <- eff
+        b <- f(a)
+      } yield builder += b
+    }.map(_.result())
+
+  def sequence[R, A, M[X] <: TraversableOnce[X]](in: M[Eff[R, A]])(implicit cbf: CanBuildFrom[M[Eff[R, A]], A, M[A]]): Eff[R, M[A]] = traverse(in)(x => x)
 
   case class Pure[A](value: A) extends Eff[Any, A] {
     def map[B](f: A => B): Eff[Any, B] = Pure(f(value))
