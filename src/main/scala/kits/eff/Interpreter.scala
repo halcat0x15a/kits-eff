@@ -15,19 +15,19 @@ trait Interpreter[F, R] {
     eff match {
       case Eff.Pure(a) =>
         pure(a)
+      case Eff.Impure(u, Arrs.LeafA(k)) =>
+        u.decomp[F, R] match {
+          case Right(fa) =>
+            ap(fa)(apply(k))
+          case Left(r) =>
+            Eff.Impure(r, Arrs(apply(k).map(r => (a: Any) => map(r)(_(a)): Result[A])))
+        }
       case Eff.Impure(u, k) =>
         u.decomp[F, R] match {
           case Right(fa) =>
             flatMap(fa)(a => apply(k(a)))
           case Left(r) =>
-            Eff.Impure(r, Arrs.Leaf((a: Any) => apply[A](k(a))))
-        }
-      case Eff.ImpureAp(u, k) =>
-        u.decomp[F, R] match {
-          case Right(fa) =>
-            ap(fa)(apply(k))
-          case Left(r) =>
-            Eff.ImpureAp(r, apply(k).map(r => (a: Any) => map(r)(_(a))))
+            Eff.Impure(r, Arrs((a: Any) => apply[A](k(a))))
         }
     }
 }

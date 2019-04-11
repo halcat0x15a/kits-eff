@@ -21,7 +21,7 @@ sealed abstract class Eff[-R, +A] extends Product with Serializable {
 }
 
 object Eff {
-  def apply[F, A](fa: F with Fx[A])(implicit F: Manifest[F]): Eff[F, A] = ImpureAp[F, A, A](Union(F, fa), Pure((a: A) => a))
+  def apply[F, A](fa: F with Fx[A])(implicit F: Manifest[F]): Eff[F, A] = Impure(Union(F, fa), Arrs.id[F, A])
 
   def run[A](eff: Eff[Any, A]): A =
     (eff: @unchecked) match {
@@ -43,14 +43,8 @@ object Eff {
   }
 
   case class Impure[-R, A, B](union: Union[R, A], arrs: Arrs[R, A, B]) extends Eff[R, B] {
-    def map[C](f: B => C): Eff[R, C] = Impure(union, arrs :+ (x => Pure(f(x))))
+    def map[C](f: B => C): Eff[R, C] = Impure(union, arrs :+ Pure(f))
     def flatMap[S, C](f: B => Eff[S, C]): Eff[R with S, C] = Impure(union.extend[S], arrs :+ f)
-    def ap[S, C](f: Eff[S, B => C]): Eff[R with S, C] = flatMap(b => f.map(_(b)))
-  }
-
-  case class ImpureAp[-R, A, B](union: Union[R, A], k: Eff[R, A => B]) extends Eff[R, B] {
-    def map[C](f: B => C): Eff[R, C] = ImpureAp(union, k.map(_.andThen(f)))
-    def flatMap[S, C](f: B => Eff[S, C]): Eff[R with S, C] = Impure(union.extend[S], Arrs.Leaf((a: A) => k.flatMap(x => f(x(a)))))
-    def ap[S, C](f: Eff[S, B => C]): Eff[R with S, C] = ImpureAp(union.extend[S], k.ap(f.map(x => (_: A => B).andThen(x))))
+    def ap[S, C](f: Eff[S, B => C]): Eff[R with S, C] = Impure(union.extend[S], arrs :+ f)
   }
 }
