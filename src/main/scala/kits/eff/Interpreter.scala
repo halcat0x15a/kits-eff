@@ -1,11 +1,17 @@
 package kits.eff
 
-trait Interpreter[F, R, A, B] {
-  def pure(a: A): Eff[R, B]
+trait Interpreter[F, R] {
+  type Result[A]
 
-  def flatMap[T](fa: F with Fx[T])(f: T => Eff[R, B]): Eff[R, B]
+  def pure[A](a: A): Eff[R, Result[A]]
 
-  final def apply(eff: Eff[F with R, A])(implicit F: Manifest[F]): Eff[R, B] =
+  def flatMap[A, B](fa: F with Fx[A])(f: A => Eff[R, Result[B]]): Eff[R, Result[B]]
+
+  def map[A, B](ra: Result[A])(f: A => B): Result[B]
+
+  def ap[A, B](fa: F with Fx[A])(f: Eff[R, Result[A => B]]): Eff[R, Result[B]] = flatMap(fa)(a => f.map(r => map(r)(_(a))))
+
+  final def apply[A](eff: Eff[F with R, A])(implicit F: Manifest[F]): Eff[R, Result[A]] =
     eff match {
       case Eff.Pure(a) =>
         pure(a)
@@ -14,26 +20,14 @@ trait Interpreter[F, R, A, B] {
           case Right(fa) =>
             flatMap(fa)(a => apply(k(a)))
           case Left(r) =>
-            Eff.Impure(r, Arrs.Leaf((a: Any) => apply(k(a))))
+            Eff.Impure(r, Arrs.Leaf((a: Any) => apply[A](k(a))))
         }
-    }
-}
-
-trait StateInterpreter[F, R, S, A, B] {
-  def pure(s: S, a: A): Eff[R, B]
-
-  def flatMap[T](s: S, fa: F with Fx[T])(f: (S, T) => Eff[R, B]): Eff[R, B]
-
-  final def apply(s: S, eff: Eff[F with R, A])(implicit F: Manifest[F]): Eff[R, B] =
-    eff match {
-      case Eff.Pure(a) =>
-        pure(s, a)
-      case Eff.Impure(u, k) =>
+      case Eff.ImpureAp(u, k) =>
         u.decomp[F, R] match {
           case Right(fa) =>
-            flatMap(s, fa)((s, a) => apply(s, k(a)))
+            ap(fa)(apply(k))
           case Left(r) =>
-            Eff.Impure(r, Arrs.Leaf((a: Any) => apply(s, k(a))))
+            Eff.ImpureAp(r, apply(k).map(r => (a: Any) => map(r)(_(a))))
         }
     }
 }

@@ -8,26 +8,30 @@ sealed abstract class Task extends Product with Serializable
 object Task {
   def context: Eff[Task, ExecutionContext] = Eff(Context)
 
-  def lift[A](future: => Future[A]): Eff[Task, A] = Eff(Lift(() => future))
+  def lift[A](f: ExecutionContext => Future[A]): Eff[Task, A] = Eff(Lift(f))
 
-  def async[A](a: => A): Eff[Task, A] =
-    context.flatMap { implicit ec =>
-      lift(Future(a))
-    }
+  def async[A](a: => A): Eff[Task, A] = lift(Future(a)(_))
 
   def run[A](eff: Eff[Task, A])(implicit ec: ExecutionContext): Future[A] = {
-    val handle = new Interpreter[Task, Any, A, Future[A]] {
-      def pure(a: A) = Eff.Pure(Future.successful(a))
-      def flatMap[T](ft: Task with Fx[T])(k: T => Eff[Any, Future[A]]) =
-        ft match {
+    val handle = new Interpreter[Task, Any] {
+      type Result[A] = Future[A]
+      def pure[A](a: A) = Eff.Pure(Future.successful(a))
+      def flatMap[A, B](fa: Task with Fx[A])(k: A => Eff[Any, Future[B]]) =
+        fa match {
           case Context => k(ec)
-          case Lift(f) => Eff.Pure(f().flatMap(a => Eff.run(k(a))))
+          case Lift(f) => Eff.Pure(f(ec).flatMap(a => Eff.run(k(a))))
         }
+      override def ap[A, B](fa: Task with Fx[A])(k: Eff[Any, Future[A => B]]) =
+        fa match {
+          case Context => k.map(_.map(_(ec)))
+          case Lift(f) => Eff.Pure(f(ec).flatMap(a => Eff.run(k).map(_(a))))
+        }
+      def map[A, B](fa: Future[A])(f: A => B) = fa.map(f)
     }
     Eff.run(handle(eff))
   }
 
   case object Context extends Task with Fx[ExecutionContext]
 
-  case class Lift[A](future: () => Future[A]) extends Task with Fx[A]
+  case class Lift[A](future: ExecutionContext => Future[A]) extends Task with Fx[A]
 }
