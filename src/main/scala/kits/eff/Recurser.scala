@@ -21,7 +21,7 @@ trait Recurser[F, R, A, B] {
                 case Right(eff) => eff
               }
             case Left(r) =>
-              Eff.Impure(r, Arrs.Leaf((a: Any) => apply(k(a))))
+              Eff.Impure(r, Arrs((a: Any) => apply(k(a))))
           }
       }
     loop(eff)
@@ -47,7 +47,7 @@ trait StateRecurser[F, R, S, A, B] {
                 case Right(eff) => eff
               }
             case Left(r) =>
-              Eff.Impure(r, Arrs.Leaf((a: Any) => apply(s, k(a))))
+              Eff.Impure(r, Arrs((a: Any) => apply(s, k(a))))
           }
       }
     loop(s, eff)
