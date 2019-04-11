@@ -14,10 +14,7 @@ object Opt {
   def run[R, A](eff: Eff[Opt with R, A]): Eff[R, Option[A]] = {
     val handle = new Interpreter[Opt, R, A, Option[A]] {
       def pure(a: A) = Eff.Pure(Some(a))
-      def flatMap[T](ft: Opt with Fx[T])(k: T => Eff[R, Option[A]]) =
-        ft match {
-          case Empty => Eff.Pure(None)
-        }
+      def flatMap[T](ft: Opt with Fx[T])(k: T => Eff[R, Option[A]]) = Eff.Pure(None)
     }
     handle(eff)
   }
