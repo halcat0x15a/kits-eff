@@ -8,14 +8,14 @@ object Exc {
   def lift[E: Manifest, A](either: Either[E, A]): Eff[Exc[E], A] = either.fold(fail(_), Eff.Pure(_))
 
   def run[E: Manifest, R, A](eff: Eff[Exc[E] with R, A]): Eff[R, Either[List[E], A]] = {
-    val handle = new Interpreter[Exc[E], R] {
+    val handle = new ApplicativeInterpreter[Exc[E], R] {
       type Result[A] = Either[List[E], A]
       def pure[A](a: A) = Eff.Pure(Right(a))
       def flatMap[A, B](fa: Exc[E] with Fx[A])(k: A => Eff[R, Either[List[E], B]]) =
         fa match {
           case Fail(e) => Eff.Pure(Left(List(e)))
         }
-      override def ap[A, B](fa: Exc[E] with Fx[A])(k: Eff[R, Either[List[E], A => B]]) =
+      def ap[A, B](fa: Exc[E] with Fx[A])(k: Eff[R, Either[List[E], A => B]]) =
         fa match {
           case Fail(e) => k.map {
             case Left(es) => Left(e :: es)

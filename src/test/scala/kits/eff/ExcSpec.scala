@@ -13,11 +13,7 @@ class ExcSpec extends FlatSpec {
   }
 
   it should "collect failures" in {
-    val e = Eff.map(
-      Exc.fail("foo"),
-      Exc.fail("bar"),
-      Exc.fail("baz")
-    )((_, _, _) => ())
+    val e = Eff.map(Exc.fail("foo"), Exc.fail("bar"), Exc.fail("baz"))((_, _, _) => ())
     assert(Eff.run(Exc.run(e)) == Left(List("foo", "bar", "baz")))
   }
 

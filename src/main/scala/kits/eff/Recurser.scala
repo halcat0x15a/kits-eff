@@ -23,7 +23,6 @@ trait Recurser[F, R, A, B] {
             case Left(r) =>
               Eff.Impure(r, Arrs((a: Any) => apply(k(a))))
           }
-
       }
     loop(eff)
   }
