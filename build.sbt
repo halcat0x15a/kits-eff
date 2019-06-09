@@ -1,5 +1,8 @@
+val Scala212 = "2.12.8"
+
 ThisBuild / organization := "org.halcat"
-ThisBuild / scalaVersion := "2.12.8"
+ThisBuild / scalaVersion := Scala212
+ThisBuild / crossScalaVersions := Seq(Scala212, "2.13.0")
 ThisBuild / version := "0.10.0-SNAPSHOT"
 
 ThisBuild / scmInfo := Some(
@@ -29,8 +32,16 @@ ThisBuild / publishTo := {
 }
 ThisBuild / publishMavenStyle := true
 
+ThisBuild / scalacOptions ++= Seq("-deprecation")
+
 lazy val root = (project in file("."))
   .settings(
     name := "kits-eff",
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+    libraryDependencies += "org.scala-lang.modules" %% "scala-collection-compat" % "2.0.0",
+    libraryDependencies += {
+      if (scalaBinaryVersion.value == "2.13")
+        "org.scalatest" % "scalatest_2.13.0-RC3" % "3.0.8-RC5" % "test"
+      else
+        "org.scalatest" %% "scalatest" % "3.0.7" % "test"
+    }
   )

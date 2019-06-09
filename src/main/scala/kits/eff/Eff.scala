@@ -1,6 +1,6 @@
 package kits.eff
 
-import scala.collection.generic.CanBuildFrom
+import scala.collection.compat._
 import scala.collection.mutable.Builder
 
 trait Fx[A] extends Any
@@ -58,10 +58,10 @@ object Eff {
       case Pure(a) => a
     }
 
-  def traverse[R, A, B, M[X] <: TraversableOnce[X]](ma: M[A])(f: A => Eff[R, B])(implicit cbf: CanBuildFrom[M[A], B, M[B]]): Eff[R, M[B]] =
-    ma.foldLeft(Pure(cbf()): Eff[R, Builder[B, M[B]]])((fmb, a) => fmb.zipWith(f(a))((mb, b) => mb += b)).map(_.result)
+  def traverse[R, A, B, M[X] <: IterableOnce[X]](ma: M[A])(f: A => Eff[R, B])(implicit cbf: Factory[B, M[B]]): Eff[R, M[B]] =
+    ma.iterator.foldLeft(Pure(cbf.newBuilder): Eff[R, Builder[B, M[B]]])((fmb, a) => fmb.zipWith(f(a))((mb, b) => mb += b)).map(_.result)
 
-  def sequence[R, A, M[X] <: TraversableOnce[X]](ma: M[Eff[R, A]])(implicit cbf: CanBuildFrom[M[Eff[R, A]], A, M[A]]): Eff[R, M[A]] =
+  def sequence[R, A, M[X] <: IterableOnce[X]](ma: M[Eff[R, A]])(implicit cbf: Factory[A, M[A]]): Eff[R, M[A]] =
     traverse(ma)(a => a)
 
   case class Pure[A](value: A) extends Eff[Any, A]
