@@ -7,7 +7,7 @@ class ReaderSpec extends FlatSpec {
     val e = for {
       i <- Reader.ask[Int]
       s <- Reader.ask[String]
-    } yield i + s
+    } yield s"$i$s"
     assert(Eff.run(Reader.run(42)(Reader.run("hoge")(e))) == "42hoge")
   }
 
