@@ -39,9 +39,6 @@ lazy val root = (project in file("."))
     name := "kits-eff",
     libraryDependencies += "org.scala-lang.modules" %% "scala-collection-compat" % "2.0.0",
     libraryDependencies += {
-      if (scalaBinaryVersion.value == "2.13")
-        "org.scalatest" % "scalatest_2.13.0-RC3" % "3.0.8-RC5" % "test"
-      else
-        "org.scalatest" %% "scalatest" % "3.0.7" % "test"
+      "org.scalatest" %% "scalatest" % "3.0.8" % "test"
     }
   )
