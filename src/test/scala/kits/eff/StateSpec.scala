@@ -14,9 +14,9 @@ class StateSpec extends FlatSpec {
   "transaction" should "protect the state" in {
     val e = for {
       _ <- State.modify((_: Int) + 1)
-      _ <- Exc.fail("error")
+      _ <- Exc.raise("error")
     } yield ()
-    assert(Eff.run(State.run(0)(Exc.run(e))) == (1, Left(List("error"))))
-    assert(Eff.run(State.run(0)(Exc.run(State[Int].transaction(e)))) == (0, Left(List("error"))))
+    assert(Eff.run(State.run(0)(Exc.run(e))) == (1, Left("error")))
+    assert(Eff.run(State.run(0)(Exc.run(State[Int].transaction(e)))) == (0, Left("error")))
   }
 }

@@ -8,7 +8,7 @@ sealed abstract class Arrs[-R, A, B] extends Product with Serializable {
       case Arrs.LeafA(v) =>
         Arrs.LeafA(v.ap(f.map(x => (_: A => B).andThen(x))))
       case _ =>
-        Arrs.Node(this, Arrs.LeafM((b: B) => f.map(_(b))))
+        Arrs.Node(this, Arrs.LeafA(f))
     }
 
   def :+[S, C](f: B => Eff[S, C]): Arrs[R with S, A, C] = Arrs.Node(this, Arrs.LeafM(f))

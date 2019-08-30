@@ -16,17 +16,15 @@ object Task {
     val handle = new ApplicativeInterpreter[Task, Any] {
       type Result[A] = Future[A]
       def pure[A](a: A) = Eff.Pure(Future.successful(a))
-      def flatMap[A, B](fa: Task with Fx[A])(k: A => Eff[Any, Future[B]]) =
-        fa match {
-          case Context => k(ec)
-          case Lift(f) => Eff.Pure(f(ec).flatMap(a => Eff.run(k(a))))
-        }
-      def ap[A, B](fa: Task with Fx[A])(k: Eff[Any, Future[A => B]]) =
-        fa match {
-          case Context => k.map(_.map(_(ec)))
-          case Lift(f) => Eff.Pure(f(ec).flatMap(a => Eff.run(k).map(_(a))))
-        }
-      def map[A, B](fa: Future[A])(f: A => B) = fa.map(f)
+      def flatMap[A, B](k: A => Eff[Any, Future[B]]) = {
+        case Context => k(ec)
+        case Lift(f) => Eff.Pure(f(ec).flatMap(a => Eff.run(k(a))))
+      }
+      def ap[A, B](k: Eff[Any, Future[A => B]]) = {
+        case Context => k.map(_.map(_(ec)))
+        case Lift(f) => Eff.Pure(f(ec).flatMap(a => Eff.run(k).map(_(a))))
+      }
+      def functor[A, B](fa: Future[A])(f: A => B) = fa.map(f)
     }
     Eff.run(handle(eff))
   }
