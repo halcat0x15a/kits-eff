@@ -5,14 +5,8 @@ import scala.collection.mutable.Builder
 
 trait Fx[A] extends Any
 
-case class Union[-R, A](tag: Manifest[_], value: Fx[_]) {
-  def decomp[F, S](implicit F: Manifest[F], ev: (F with S) <:< R): Either[Union[S, A], F with Fx[A]] =
-    if (F.runtimeClass.isInstance(value) && tag <:< F)
-      Right(value.asInstanceOf[F with Fx[A]])
-    else
-      Left(this.asInstanceOf[Union[S, A]])
-
-  def extend[S]: Union[R with S, A] = this.asInstanceOf[Union[R with S, A]]
+class Union[-R, A](val value: Fx[A]) extends AnyVal {
+  def widen[S]: Union[R with S, A] = this.asInstanceOf[Union[R with S, A]]
 }
 
 sealed abstract class Eff[-R, +A] extends Product with Serializable {
@@ -29,7 +23,7 @@ sealed abstract class Eff[-R, +A] extends Product with Serializable {
       case Eff.Pure(v) =>
         f(v)
       case Eff.Impure(u, k) =>
-        Eff.Impure(u.extend[S], k :+ f)
+        Eff.Impure(u.widen[S], k :+ f)
     }
 
   def ap[S, B](f: Eff[S, A => B]): Eff[R with S, B] =
@@ -37,7 +31,7 @@ sealed abstract class Eff[-R, +A] extends Product with Serializable {
       case Eff.Pure(v) =>
         f.map(_(v))
       case Eff.Impure(u, k) =>
-        Eff.Impure(u.extend[S], k :+ f)
+        Eff.Impure(u.widen[S], k :+ f)
     }
 
   def flatten[S, B](implicit ev: A <:< Eff[S, B]): Eff[R with S, B] =
@@ -48,15 +42,17 @@ sealed abstract class Eff[-R, +A] extends Product with Serializable {
 
   def zip[S, B](that: Eff[S, B]): Eff[R with S, (A, B)] =
     zipWith(that)((_, _))
+
+  def run(implicit ev: Any <:< R): A =
+    (this: @unchecked) match {
+      case Eff.Pure(a) => a
+    }
 }
 
 object Eff {
-  def apply[F, A](fa: F with Fx[A])(implicit F: Manifest[F]): Eff[F, A] = Impure(Union(F, fa), Arrs.id[F, A])
+  def apply[F, A](fa: F with Fx[A]): Eff[F, A] = Impure(new Union(fa), Arrs.id[F, A])
 
-  def run[A](eff: Eff[Any, A]): A =
-    (eff: @unchecked) match {
-      case Pure(a) => a
-    }
+  def run[A](eff: Eff[Any, A]): A = eff.run
 
   def traverse[R, A, B, M[X] <: IterableOnce[X]](ma: M[A])(f: A => Eff[R, B])(implicit cbf: Factory[B, M[B]]): Eff[R, M[B]] =
     ma.iterator.foldLeft(Pure(cbf.newBuilder): Eff[R, Builder[B, M[B]]])((fmb, a) => fmb.zipWith(f(a))((mb, b) => mb += b)).map(_.result)
