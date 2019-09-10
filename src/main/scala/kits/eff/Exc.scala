@@ -1,33 +1,35 @@
 package kits.eff
 
-sealed abstract class Exc[E] extends Product with Serializable
+trait Exc[E] {
+  sealed abstract class Effect extends Product with Serializable
 
-object Exc {
-  def raise[E](e: E)(implicit tag: Manifest[E]): Eff[Exc[E], Nothing] = Eff(Raise(tag, e))
+  case class Raise(value: E) extends Effect with Fx[Nothing]
 
-  def lift[E: Manifest, A](either: Either[E, A]): Eff[Exc[E], A] = either.fold(raise(_), Eff.Pure(_))
+  def raise(e: E): Eff[Effect, Nothing] = Eff(Raise(e))
 
-  def run[E, R, A](eff: Eff[Exc[E] with R, A])(implicit tag: Manifest[E]): Eff[R, Either[E, A]] = {
-    val handle = new Interpreter[Exc[E], R, A, Either[E, A]] {
+  def lift[A](either: Either[E, A]): Eff[Effect, A] = either.fold(raise(_), Eff.Pure(_))
+
+  def run[R, A](eff: Eff[Effect with R, A]): Eff[R, Either[E, A]] = {
+    val handle = new Interpreter[Effect, R, A, Either[E, A]] {
       def pure(a: A) = Eff.Pure(Right(a))
       def flatMap[T](k: T => Eff[R, Either[E, A]]) = {
-        case raise: Raise[E] if raise.tag == tag => Eff.Pure(Left(raise.value))
+        case Raise(e) => Eff.Pure(Left(e))
       }
     }
     handle(eff)
   }
 
-  def accumulate[E, R, A](eff: Eff[Exc[E] with R, A])(implicit tag: Manifest[E]): Eff[R, Either[List[E], A]] = {
-    val handle = new ApplicativeInterpreter[Exc[E], R] {
+  def accumulate[R, A](eff: Eff[Effect with R, A]): Eff[R, Either[List[E], A]] = {
+    val handle = new ApplicativeInterpreter[Effect, R] {
       type Result[A] = Either[List[E], A]
       def pure[A](a: A) = Eff.Pure(Right(a))
       def flatMap[A, B](k: A => Eff[R, Either[List[E], B]]) = {
-        case raise: Raise[E] if raise.tag == tag => Eff.Pure(Left(List(raise.value)))
+        case Raise(e) => Eff.Pure(Left(List(e)))
       }
       def ap[A, B](k: Eff[R, Either[List[E], A => B]]) = {
-        case raise: Raise[E] if raise.tag == tag => k.map {
-          case Left(es) => Left(raise.value :: es)
-          case Right(_) => Left(List(raise.value))
+        case Raise(e) => k.map {
+          case Left(es) => Left(e :: es)
+          case Right(_) => Left(List(e))
         }
       }
       def functor[A, B](fa: Either[List[E], A])(f: A => B) = fa.map(f)
@@ -35,19 +37,18 @@ object Exc {
     handle(eff)
   }
 
-  def recover[E: Manifest, R, A](eff: Eff[Exc[E] with R, A])(f: E => Eff[R, A]): Eff[R, A] = {
-    run[E, R, A](eff).flatMap {
+  def recover[R, A](eff: Eff[Effect with R, A])(f: E => Eff[R, A]): Eff[R, A] = {
+    run[R, A](eff).flatMap {
       case Right(a) => Eff.Pure(a)
       case Left(e) => f(e)
     }
   }
+}
 
-  case class Raise[E](tag: Manifest[E], value: E) extends Exc[E] with Fx[Nothing]
+object Exc {
+  def apply[E](implicit exc: Exc[E]): exc.type = exc
 
-  def apply[E](implicit E: Manifest[E]): Ops[E] = new Ops(E)
+  def raise[E](e: E)(implicit exc: Exc[E]): Eff[exc.Effect, Nothing] = exc.raise(e)
 
-  class Ops[E](val manifest: Manifest[E]) extends AnyVal {
-    def run[R, A](eff: Eff[Exc[E] with R, A]): Eff[R, Either[E, A]] = Exc.run[E, R, A](eff)(manifest)
-    def recover[R, A](eff: Eff[Exc[E] with R, A])(f: E => Eff[R, A]): Eff[R, A] = Exc.recover[E, R, A](eff)(f)(manifest)
-  }
+  def lift[E, A](either: Either[E, A])(implicit exc: Exc[E]): Eff[exc.Effect, A] = exc.lift(either)
 }

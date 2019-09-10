@@ -6,7 +6,7 @@ import scala.collection.mutable.Builder
 trait Fx[A] extends Any
 
 class Union[-R, A](val value: Fx[A]) extends AnyVal {
-  def widen[S]: Union[R with S, A] = this.asInstanceOf[Union[R with S, A]]
+  def widen[S]: Union[R with S, A] = new Union[R with S, A](value)
 }
 
 sealed abstract class Eff[-R, +A] extends Product with Serializable {

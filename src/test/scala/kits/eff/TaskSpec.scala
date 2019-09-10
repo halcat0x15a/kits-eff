@@ -5,12 +5,14 @@ import scala.concurrent.ExecutionContext
 
 class TaskSpec extends AsyncFlatSpec {
   "Task" should "run as Future asynchronously" in {
+    implicit val readerInt = new Reader[Int] {}
+    implicit val writerInt = new Writer[Int] {}
     val e = for {
       n <- Reader.ask[Int]
       _ <- Writer.tell(n)
       m <- Task.async(n * n)
     } yield m
-    Task.run(Reader.run(2)(Writer.run(e))).map { result =>
+    Task.run(Reader[Int].run(2)(Writer[Int].run(e))).map { result =>
       assert(result == (Vector(2), 4))
     }
   }
