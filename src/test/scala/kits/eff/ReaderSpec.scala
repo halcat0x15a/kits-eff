@@ -3,18 +3,21 @@ package kits.eff
 import org.scalatest.FlatSpec
 
 class ReaderSpec extends FlatSpec {
+  implicit val readerInt = new Reader[Int] {}
+
   "Reader" should "handle multiple input" in {
+    implicit val readerString = new Reader[String] {}
     val e = for {
       i <- Reader.ask[Int]
       s <- Reader.ask[String]
     } yield s"$i$s"
-    assert(Eff.run(Reader.run(42)(Reader.run("hoge")(e))) == "42hoge")
+    assert(Reader[Int].run(42)(Reader[String].run("hoge")(e)).run == "42hoge")
   }
 
   "local" should "modify the environment" in {
     val e = for {
       i <- Reader.ask[Int]
     } yield i / 2
-    assert(Eff.run(Reader.run(42)(Reader.local((_: Int) * 2)(e))) == 42)
+    assert(Reader[Int].run(42)(Reader[Int].local(e)(_ * 2)).run == 42)
   }
 }

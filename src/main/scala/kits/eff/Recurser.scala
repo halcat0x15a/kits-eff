@@ -35,7 +35,7 @@ trait StateRecurser[F, R, S, A, B] {
 
   def tailRec[T](s: S): PartialFunction[Fx[T], Either[(S, T), Eff[R, B]]]
 
-  def apply(s: S, eff: Eff[F with R, A])(implicit F: Manifest[F]): Eff[R, B] = {
+  def apply(s: S, eff: Eff[F with R, A]): Eff[R, B] = {
     @tailrec
     def loop(s: S, eff: Eff[F with R, A]): Eff[R, B] =
       eff match {
