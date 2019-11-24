@@ -6,6 +6,10 @@ import scala.concurrent.Future
 sealed abstract class Task extends Product with Serializable
 
 object Task {
+  case object Context extends Task with Fx[ExecutionContext]
+
+  case class Lift[A](future: ExecutionContext => Future[A]) extends Task with Fx[A]
+
   def context: Eff[Task, ExecutionContext] = Eff(Context)
 
   def lift[A](f: ExecutionContext => Future[A]): Eff[Task, A] = Eff(Lift(f))
@@ -28,8 +32,4 @@ object Task {
     }
     Eff.run(handle(eff))
   }
-
-  case object Context extends Task with Fx[ExecutionContext]
-
-  case class Lift[A](future: ExecutionContext => Future[A]) extends Task with Fx[A]
 }

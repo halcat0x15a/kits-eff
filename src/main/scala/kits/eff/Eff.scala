@@ -6,7 +6,7 @@ import scala.collection.mutable.Builder
 trait Fx[A] extends Any
 
 class Union[-R, A](val value: Fx[A]) extends AnyVal {
-  def widen[S]: Union[R with S, A] = this.asInstanceOf[Union[R with S, A]]
+  def widen[S]: Union[R with S, A] = new Union(value)
 }
 
 sealed abstract class Eff[-R, +A] extends Product with Serializable {
@@ -60,7 +60,7 @@ object Eff {
   def sequence[R, A, M[X] <: IterableOnce[X]](ma: M[Eff[R, A]])(implicit cbf: Factory[A, M[A]]): Eff[R, M[A]] =
     traverse(ma)(a => a)
 
-  case class Pure[A](value: A) extends Eff[Any, A]
+  case class Pure[+A](value: A) extends Eff[Any, A]
 
-  case class Impure[-R, A, B](union: Union[R, A], arrs: Arrs[R, A, B]) extends Eff[R, B]
+  case class Impure[-R, A, +B](union: Union[R, A], arrs: Arrs[R, A, B]) extends Eff[R, B]
 }

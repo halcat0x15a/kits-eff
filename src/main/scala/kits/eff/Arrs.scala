@@ -2,7 +2,7 @@ package kits.eff
 
 import scala.annotation.tailrec
 
-sealed abstract class Arrs[-R, A, B] extends Product with Serializable {
+sealed abstract class Arrs[-R, -A, +B] extends Product with Serializable {
   def :+[S, C](f: Eff[S, B => C]): Arrs[R with S, A, C] =
     this match {
       case Arrs.LeafA(v) =>

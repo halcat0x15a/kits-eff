@@ -3,13 +3,15 @@ package kits.eff
 sealed abstract class Writer[W] extends Product with Serializable
 
 object Writer {
+  case class Tell[W](tag: Manifest[W], value: W) extends Writer[W] with Fx[Unit]
+
   def tell[W](w: W)(implicit tag: Manifest[W]): Eff[Writer[W], Unit] = Eff(Tell(tag, w))
 
   def fold[W, R, A, B](eff: Eff[Writer[W] with R, A])(z: B)(f: (B, W) => B)(implicit tag: Manifest[W]): Eff[R, (B, A)] = {
     val handle = new StateRecurser[Writer[W], R, B, A, (B, A)] {
       def pure(s: B, a: A) = Eff.Pure((s, a))
       def tailRec[T](s: B) = {
-        case tell: Tell[W] if tell.tag == tag => Left(f(s, tell.value), ())
+        case tell: Tell[W] if tell.tag == tag => Left((f(s, tell.value), ()))
       }
     }
     handle(z, eff)
@@ -25,8 +27,6 @@ object Writer {
         eff.flatMap(_ => tell(w))
       }
     } yield r
-
-  case class Tell[W](tag: Manifest[W], value: W) extends Writer[W] with Fx[Unit]
 
   def apply[W](implicit W: Manifest[W]): Ops[W] = new Ops(W)
 
