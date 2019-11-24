@@ -3,21 +3,17 @@ package kits.eff
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+sealed abstract class Task extends Product with Serializable
+
 object Task {
-  sealed abstract class Effect extends Product with Serializable
+  def context: Eff[Task, ExecutionContext] = Eff(Context)
 
-  case object Context extends Effect with Fx[ExecutionContext]
+  def lift[A](f: ExecutionContext => Future[A]): Eff[Task, A] = Eff(Lift(f))
 
-  case class Lift[A](future: ExecutionContext => Future[A]) extends Effect with Fx[A]
+  def async[A](a: => A): Eff[Task, A] = lift(Future(a)(_))
 
-  def context: Eff[Effect, ExecutionContext] = Eff(Context)
-
-  def lift[A](f: ExecutionContext => Future[A]): Eff[Effect, A] = Eff(Lift(f))
-
-  def async[A](a: => A): Eff[Effect, A] = lift(Future(a)(_))
-
-  def run[A](eff: Eff[Effect, A])(implicit ec: ExecutionContext): Future[A] = {
-    val handle = new ApplicativeInterpreter[Effect, Any] {
+  def run[A](eff: Eff[Task, A])(implicit ec: ExecutionContext): Future[A] = {
+    val handle = new ApplicativeInterpreter[Task, Any] {
       type Result[A] = Future[A]
       def pure[A](a: A) = Eff.Pure(Future.successful(a))
       def flatMap[A, B](k: A => Eff[Any, Future[B]]) = {
@@ -32,4 +28,8 @@ object Task {
     }
     Eff.run(handle(eff))
   }
+
+  case object Context extends Task with Fx[ExecutionContext]
+
+  case class Lift[A](future: ExecutionContext => Future[A]) extends Task with Fx[A]
 }

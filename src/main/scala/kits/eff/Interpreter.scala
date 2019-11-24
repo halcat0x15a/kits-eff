@@ -29,7 +29,7 @@ trait ApplicativeInterpreter[F, R] {
 
   def ap[A, B](f: Eff[R, Result[A => B]]): PartialFunction[Fx[A], Eff[R, Result[B]]]
 
-  def apply[A](eff: Eff[F with R, A]): Eff[R, Result[A]] =
+  def apply[A](eff: Eff[F with R, A])(implicit F: Manifest[F]): Eff[R, Result[A]] =
     eff match {
       case Eff.Pure(a) =>
         pure(a)
