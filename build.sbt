@@ -3,7 +3,7 @@ val Scala212 = "2.12.8"
 ThisBuild / organization := "org.halcat"
 ThisBuild / scalaVersion := Scala212
 ThisBuild / crossScalaVersions := Seq(Scala212, "2.13.0")
-ThisBuild / version := "0.10.0-SNAPSHOT"
+ThisBuild / version := "0.10.0"
 
 ThisBuild / scmInfo := Some(
   ScmInfo(
