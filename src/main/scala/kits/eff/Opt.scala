@@ -1,23 +1,20 @@
 package kits.eff
 
 object Opt {
-  val exc = new Exc[Unit] {}
+  def empty: Eff[Opt, Nothing] = Exc.raise(())
 
-  type Effect = exc.Effect
-
-  def empty: Eff[Effect, Nothing] = exc.raise(())
-
-  def lift[A](option: Option[A]): Eff[Effect, A] =
+  def lift[A](option: Option[A]): Eff[Opt, A] =
     option match {
       case None => empty
       case Some(a) => Eff.Pure(a)
     }
 
-  def run[R, A](eff: Eff[Effect with R, A]): Eff[R, Option[A]] = {
-    val handle = new Interpreter[Effect, R, A, Option[A]] {
+  def run[R, A](eff: Eff[Opt with R, A]): Eff[R, Option[A]] = {
+    val tag = implicitly[Manifest[Unit]]
+    val handle = new Interpreter[Opt, R, A, Option[A]] {
       def pure(a: A) = Eff.Pure(Some(a))
       def flatMap[T](k: T => Eff[R, Option[A]]) = {
-        case exc.Raise(()) => Eff.Pure(None)
+        case Exc.Raise(t, ()) if t == tag => Eff.Pure(None)
       }
     }
     handle(eff)
