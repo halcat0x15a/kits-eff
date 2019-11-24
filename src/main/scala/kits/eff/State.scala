@@ -12,8 +12,8 @@ object State {
     val handle = new StateRecurser[State[S], R, S, A, (S, A)] {
       def pure(s: S, a: A) = Eff.Pure((s, a))
       def tailRec[T](s: S) = {
-        case ask: Reader.Ask[S] if ask.tag == tag => Left(s, s)
-        case tell: Writer.Tell[S] if tell.tag == tag => Left(tell.value, ())
+        case ask: Reader.Ask[S] if ask.tag == tag => Left((s, s))
+        case tell: Writer.Tell[S] if tell.tag == tag => Left((tell.value, ()))
       }
     }
     handle(s, eff)

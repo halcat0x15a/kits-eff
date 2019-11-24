@@ -3,6 +3,8 @@ package kits.eff
 sealed abstract class Exc[E] extends Product with Serializable
 
 object Exc {
+  case class Raise[E](tag: Manifest[E], value: E) extends Exc[E] with Fx[Nothing]
+
   def raise[E](e: E)(implicit tag: Manifest[E]): Eff[Exc[E], Nothing] = Eff(Raise(tag, e))
 
   def lift[E: Manifest, A](either: Either[E, A]): Eff[Exc[E], A] = either.fold(raise(_), Eff.Pure(_))
@@ -41,8 +43,6 @@ object Exc {
       case Left(e) => f(e)
     }
   }
-
-  case class Raise[E](tag: Manifest[E], value: E) extends Exc[E] with Fx[Nothing]
 
   def apply[E](implicit E: Manifest[E]): Ops[E] = new Ops(E)
 

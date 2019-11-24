@@ -14,7 +14,7 @@ object Opt {
     val handle = new Interpreter[Opt, R, A, Option[A]] {
       def pure(a: A) = Eff.Pure(Some(a))
       def flatMap[T](k: T => Eff[R, Option[A]]) = {
-        case Exc.Raise(t, ()) if t == tag => Eff.Pure(None)
+        case raise: Exc.Raise[Unit] if raise.tag == tag => Eff.Pure(None)
       }
     }
     handle(eff)

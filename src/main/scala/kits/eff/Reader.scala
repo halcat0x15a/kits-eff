@@ -3,6 +3,8 @@ package kits.eff
 sealed abstract class Reader[I] extends Product with Serializable
 
 object Reader {
+  case class Ask[I](tag: Manifest[I]) extends Reader[I] with Fx[I]
+
   def ask[I](implicit tag: Manifest[I]): Eff[Reader[I], I] = Eff(Ask(tag))
 
   def run[I, R, A](i: I)(eff: Eff[Reader[I] with R, A])(implicit tag: Manifest[I]): Eff[R, A] = {
@@ -20,6 +22,4 @@ object Reader {
       val r = f(r0)
       run[I, R, A](r)(eff)
     }
-
-  case class Ask[I](tag: Manifest[I]) extends Reader[I] with Fx[I]
 }
